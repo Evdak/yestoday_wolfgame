@@ -12,6 +12,8 @@ from models.room import Room
 from models.user import User
 from utils import add_cancel_button, get_interface_ip
 
+import argparse
+
 basicConfig(stream=sys.stdout,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = getLogger('Wolf')
@@ -176,4 +178,9 @@ async def main():
 if __name__ == '__main__':
     logger.info(
         f"The Werewolf Killing Server was started successfully! You can join the game by entering http://{get_interface_ip()} in the browser")
-    start_server(main, debug=False, cdn=False)
+    # start_server(main, debug=False, cdn=False)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--port", type=int, default=8080)
+    args = parser.parse_args()
+
+    start_server(main, port=args.port)
