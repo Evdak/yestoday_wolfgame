@@ -18,11 +18,11 @@ if TYPE_CHECKING:
 
 def player_action(func):
     """
-    玩家操作等待解锁逻辑装饰器
+    Player operation waits to unlock logic decorator
 
-    1. 仅用于 User 类下的游戏角色操作
-    2. 被装饰的函数返回字符串时，将返回错误信息给当前用户，并继续锁定
-    3. 返回 None / True 时，将解锁游戏阶段
+    1. Only used for game character operations under the User class
+    2. When the decorated function returns a string, it will return an error message to the current user and continue to lock
+    3. When None / True is returned, the game stage will be unlocked
     """
 
     def wrapper(self: 'User', *args, **kwargs):
@@ -47,44 +47,45 @@ def player_action(func):
 class User:
     nick: str
     # Session
-    main_task_id: Any  # 主 Task 线程 id
+    main_task_id: Any  # Main Task thread id
     input_blocking: bool
 
     # Game
-    room: Optional['Room']  # 所在房间
-    role: Optional[Role]  # 角色
-    skill: dict  # 角色技能
-    status: Optional[PlayerStatus]  # 玩家状态
+    room: Optional['Room']  # The room
+    role: Optional[Role]  # role
+    skill: dict  # character skill
+    status: Optional[PlayerStatus]  # Player status
 
-    game_msg: OutputHandler  # 游戏日志 UI Handler
-    game_msg_syncer: Optional[TaskHandle]  # 游戏日志同步线程
+    game_msg: OutputHandler  # Game log UI Handler
+    game_msg_syncer: Optional[TaskHandle]  # Game log synchronization thread
 
     def __str__(self):
         return self.nick
 
     __repr__ = __str__
 
-    # 房间
+    # Room
     def send_msg(self, text):
-        """发送仅该用户可见的房间消息"""
+        """Send a room message visible only to this user"""
         if self.room:
             self.room.send_msg(text, nick=self.nick)
         else:
-            logger.warning('在玩家非进入房间状态时调用了 User.send_msg()')
+            logger.warning(
+                'User.send_msg() was called when the player did not enter the room state')
 
     async def _game_msg_syncer(self):
         """
-        同步 self.game_msg 和 self.room.log
+        Sync self.game_msg and self.room.log
 
-        由 Room 管理，运行在用户 session 的主 Task 线程上
+        Managed by Room and runs on the main Task thread of the user session
         """
         last_idx = len(self.room.log)
         while True:
             for msg in self.room.log[last_idx:]:
                 if msg[0] == self.nick:
-                    self.game_msg.append(f'👂：{msg[1]}')
+                    self.game_msg.append(f'👂:{msg[1]}')
                 elif msg[0] == Config.SYS_NICK:
-                    self.game_msg.append(f'📢：{msg[1]}')
+                    self.game_msg.append(f'📢:{msg[1]}')
                 elif msg[0] is None:
                     if msg[1] == LogCtrl.RemoveInput:
                         # Workaround, see https://github.com/wang0618/PyWebIO/issues/32
@@ -95,7 +96,7 @@ class User:
                                 'data': None
                             })
 
-            # 清理记录
+            # clean up records
             if len(self.room.log) > 50000:
                 self.room.log = self.room.log[len(self.room.log) // 2:]
             last_idx = len(self.room.log)
@@ -103,21 +104,21 @@ class User:
             await asyncio.sleep(0.2)
 
     def start_syncer(self):
-        """启动游戏日志同步逻辑，由 Room 管理"""
+        """Start game log synchronization logic, managed by Room"""
         if self.game_msg_syncer is not None:
             raise AssertionError
         self.game_msg_syncer = run_async(self._game_msg_syncer())
 
     def stop_syncer(self):
-        """结束游戏日志同步逻辑，由 Room 管理"""
+        """End game log synchronization logic, managed by Room"""
         if self.game_msg_syncer is None or self.game_msg_syncer.closed():
             raise AssertionError
         self.game_msg_syncer.close()
         self.game_msg_syncer = None
 
-    # 玩家状态
+    # player state
     def should_act(self):
-        """当前处于该玩家进行操作的阶段"""
+        """Currently in the stage of the player's operation"""
         stage_map = {
             GameStage.Day: [],
             GameStage.GUARD: [Role.GUARD],
@@ -129,14 +130,14 @@ class User:
         return self.role in stage_map.get(self.room.stage, []) and self.status != PlayerStatus.DEAD
 
     def witch_has_heal(self):
-        """女巫持有解药"""
+        """The witch holds the antidote"""
         return self.skill.get('heal') is True
 
     def witch_has_poison(self):
-        """女巫持有毒药"""
+        """The witch holds poison."""
         return self.skill.get('poison') is True
+    # player action
 
-    # 玩家操作
     @player_action
     def skip(self):
         pass
@@ -147,40 +148,41 @@ class User:
 
     @player_action
     def detective_identify_player(self, nick):
-        self.send_msg(f'玩家 {nick} 的身份是 {self.room.players[nick].role}')
+        self.send_msg(
+            f"Player {nick}'s identity is {self.room.players[nick].role}")
 
     @player_action
     def witch_kill_player(self, nick):
         if not self.witch_has_poison():
-            return '没有毒药了'
+            return 'No more poison'
         self.room.players[nick].status = PlayerStatus.PENDING_POISON
 
     @player_action
     def witch_heal_player(self, nick):
         if self.room.witch_rule == WitchRule.NO_SELF_RESCUE:
             if nick == self.nick:
-                return '不能解救自己'
+                return "can't save myself"
         if self.room.witch_rule == WitchRule.SELF_RESCUE_FIRST_NIGHT_ONLY:
             if nick == self.nick and self.room.round != 1:
-                return '仅第一晚可以解救自己'
+                return 'Only the first night can save yourself'
 
         if not self.witch_has_heal():
-            return '没有解药了'
+            return 'There is no antidote'
         self.room.players[nick].status = PlayerStatus.PENDING_HEAL
 
     @player_action
     def guard_protect_player(self, nick):
         if self.skill['last_protect'] == nick:
-            return '两晚不可守卫同一玩家'
+            return 'Do not guard the same player for two nights'
 
         if self.room.players[nick].status == PlayerStatus.PENDING_HEAL and \
                 self.room.guard_rule == GuardRule.MED_CONFLICT:
-            # 同守同救冲突
+            # Conflict with the same guard and the same salvation
             self.room.players[nick].status = PlayerStatus.PENDING_DEAD
             return
 
         if self.room.players[nick].status == PlayerStatus.PENDING_POISON:
-            # 守卫无法防御女巫毒药
+            # Guards cannot defend against witch poison
             return
 
         self.room.players[nick].status = PlayerStatus.PENDING_GUARD
@@ -188,17 +190,17 @@ class User:
     @player_action
     def hunter_gun_status(self):
         self.send_msg(
-            f'你的开枪状态为...'
-            f'{"可以开枪" if self.status != PlayerStatus.PENDING_POISON else "无法开枪"}'
+            f'Your firing status is...'
+            f"""{"Can shoot" if self.status != PlayerStatus.PENDING_POISON else "Can't shoot"}"""
         )
 
-    # 登录
-    @classmethod
+    # Log in
+    @ classmethod
     def validate_nick(cls, nick) -> Optional[str]:
         if nick in Global.users or Config.SYS_NICK in nick:
-            return '昵称已被使用'
+            return 'nickname already in use'
 
-    @classmethod
+    @ classmethod
     def alloc(cls, nick, init_task_id) -> 'User':
         if nick in Global.users:
             raise ValueError
@@ -213,14 +215,14 @@ class User:
             game_msg=output(),
             game_msg_syncer=None
         )
-        logger.info(f'用户 "{nick}" 登录')
+        logger.info(f'user "{nick}" logged in')
         return Global.users[nick]
 
-    @classmethod
+    @ classmethod
     def free(cls, user: 'User'):
-        # 反注册
+        # unregister
         Global.users.pop(user.nick)
-        # 从房间移除用户
+        # remove user from room
         if user.room:
             user.room.remove_player(user)
-        logger.info(f'用户 "{user.nick}" 注销')
+        logger.info(f'User "{user.nick}" logged out')

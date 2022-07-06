@@ -3,8 +3,8 @@ from typing import Union
 
 
 class LogCtrl(Enum):
-    """广播目标为 None 的，特殊控制消息类型枚举"""
-    RemoveInput = '移除当前输入框'
+    """Broadcast target is None, special control message type enumeration"""
+    RemoveInput = 'Remove the current input box'
 
 
 class PlainEnum(Enum):
@@ -16,31 +16,31 @@ class PlainEnum(Enum):
 
 
 class PlayerStatus(PlainEnum):
-    ALIVE = '存活'
-    DEAD = '出局'
-    PENDING_DEAD = '被狼人/女巫/守救冲突杀害'
-    PENDING_HEAL = '被女巫解救'
-    PENDING_POISON = '被女巫毒害'
-    PENDING_GUARD = '被守卫守护'
+    ALIVE = 'Alive'
+    DEAD = 'Out'
+    PENDING_DEAD = 'Killed by Werewolf/Witch/rescue conflict'
+    PENDING_HEAL = 'Freed by a Witch'
+    PENDING_POISON = 'Poisoned by a Witch'
+    PENDING_GUARD = 'Guarded by guards'
 
 
 class GameStage(Enum):
     Day = 'Day'
-    WOLF = '狼人'
-    DETECTIVE = '预言家'
-    WITCH = '女巫'
-    GUARD = '守卫'
-    HUNTER = '猎人'
+    WOLF = 'Wolfman'
+    DETECTIVE = 'Prophet'
+    WITCH = 'Witch'
+    GUARD = 'Guard'
+    HUNTER = 'Hunter'
 
 
 class Role(PlainEnum):
-    WOLF = '狼人'  # 狼人
-    WOLF_KING = '狼王'  # 狼王
-    DETECTIVE = '预言家'  # 预言家
-    WITCH = '女巫'  # 女巫
-    GUARD = '守卫'  # 守卫
-    HUNTER = '猎人'  # 猎人
-    CITIZEN = '平民'  # 平民
+    WOLF = 'Werewolf'  # Werewolf
+    WOLF_KING = 'Wolf King'  # Wolf King
+    DETECTIVE = 'The Prophet'  # the seer
+    WITCH = 'Witch'  # Witch
+    GUARD = 'Guard'  # guard
+    HUNTER = 'Hunter'  # hunter
+    CITIZEN = 'Civilian'  # Civilian
 
     @classmethod
     def as_god_citizen_options(cls) -> list:
@@ -62,23 +62,23 @@ class Role(PlainEnum):
     @classmethod
     def normal_mapping(cls) -> dict:
         return {
-            '狼人': cls.WOLF,
-            '平民': cls.CITIZEN,
+            'Wolfman': cls.WOLF,
+            'Civilian': cls.CITIZEN,
         }
 
     @classmethod
     def god_wolf_mapping(cls) -> dict:
         return {
-            '狼王': cls.WOLF_KING
+            'Wolf King': cls.WOLF_KING
         }
 
     @classmethod
     def god_citizen_mapping(cls) -> dict:
         return {
-            '预言家': cls.DETECTIVE,
-            '女巫': cls.WITCH,
-            '守卫': cls.GUARD,
-            '猎人': cls.HUNTER,
+            'Prophet': cls.DETECTIVE,
+            'Witch': cls.WITCH,
+            'Guard': cls.GUARD,
+            'Hunter': cls.HUNTER,
         }
 
     @classmethod
@@ -87,9 +87,9 @@ class Role(PlainEnum):
 
 
 class WitchRule(Enum):
-    SELF_RESCUE_FIRST_NIGHT_ONLY = '仅第一夜可自救'
-    NO_SELF_RESCUE = '不可自救'
-    ALWAYS_SELF_RESCUE = '始终可自救'
+    SELF_RESCUE_FIRST_NIGHT_ONLY = 'Only the first night can save yourself'
+    NO_SELF_RESCUE = 'No self-rescue'
+    ALWAYS_SELF_RESCUE = 'Always save yourself'
 
     @classmethod
     def as_options(cls) -> list:
@@ -107,15 +107,15 @@ class WitchRule(Enum):
     @classmethod
     def mapping(cls) -> dict:
         return {
-            '仅第一夜可自救': cls.SELF_RESCUE_FIRST_NIGHT_ONLY,
-            '始终可自救': cls.ALWAYS_SELF_RESCUE,
-            '不可自救': cls.NO_SELF_RESCUE,
+            'Only the first night can save yourself': cls.SELF_RESCUE_FIRST_NIGHT_ONLY,
+            'Always save yourself': cls.ALWAYS_SELF_RESCUE,
+            'No self-rescue': cls.NO_SELF_RESCUE,
         }
 
 
 class GuardRule(Enum):
-    MED_CONFLICT = '同时被守被救时，对象死亡'
-    NO_MED_CONFLICT = '同时被守被救时，对象存活'
+    MED_CONFLICT = 'The subject dies when being rescued at the same time'
+    NO_MED_CONFLICT = 'The object survives when being defended and rescued at the same time'
 
     @classmethod
     def as_options(cls) -> list:
@@ -133,6 +133,6 @@ class GuardRule(Enum):
     @classmethod
     def mapping(cls) -> dict:
         return {
-            '同时被守被救时，对象死亡': cls.MED_CONFLICT,
-            '同时被守被救时，对象存活': cls.NO_MED_CONFLICT,
+            'The object dies when guarded and rescued at the same time': cls.MED_CONFLICT,
+            'The object survives when being guarded and rescued at the same time': cls.NO_MED_CONFLICT,
         }

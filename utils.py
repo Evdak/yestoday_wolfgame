@@ -28,18 +28,18 @@ def say(text):
         threading.Thread(target=wrapper).start()
 
     else:
-        logger.warning(f'{platform} 暂不支持TTS语音播报')
+        logger.warning(f'{platform} does not support TTS voice broadcast')
 
 
 def get_interface_ip() -> str:
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(('8.8.8.8', 80))
-        return s.getsockname()[0] or '获取失败'
+        return s.getsockname()[0] or 'Get failed'
     except Exception:
         traceback.print_exc()
-        return '获取失败'
+        return 'Get failed'
 
 
 def add_cancel_button(buttons: list):
-    return buttons + [{'label': '放弃', 'type': 'cancel'}]
+    return buttons + [{'label': 'cancel', 'type': 'cancel'}]
