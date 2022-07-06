@@ -177,4 +177,4 @@ if __name__ == '__main__':
     logger.info(
         f"The Werewolf Killing Server was started successfully! You can join the game by entering http://{get_interface_ip()} in the browser")
     start_server(main, debug=False,
-                 host='https://yestodaygamewolf.herokuapp.com', cdn=False)
+                 host='yestodaygamewolf.herokuapp.com', cdn=False)
